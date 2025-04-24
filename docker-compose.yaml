@@ -1,0 +1,76 @@
+version: "3.8"
+
+services:
+  backend:
+    image: backend:${TAG:-latest}
+    build:
+      context: ./Backend/odc
+      dockerfile: Dockerfile
+      args:
+        - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=odc.settings
+      - POSTGRES_HOST=database
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  database:
+    image: postgres:15-alpine # Version fixe + Alpine pour réduire la taille
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    image: frontend:${TAG:-latest}
+    build:
+      context: ./Frontend # Cheval relatif depuis la racine du projet
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${API_BASE_URL}
+    ports:
+      - "5173:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+    name: odc_pgdata # Nom explicite pour le volume
+
+# Utilisé uniquement en dev/local
+profiles:
+  tools:
+    services:
+      db-migrations:
+        image: backend:${TAG:-latest}
+        command: python manage.py migrate
+        depends_on:
+          database:
+            condition: service_healthy
+        environment:
+          - DJANGO_SETTINGS_MODULE=odc.settings
+          - POSTGRES_HOST=database
+          - POSTGRES_USER=${DB_USER}
+          - POSTGRES_PASSWORD=${DB_PASSWORD}
+          - POSTGRES_DB=${DB_NAME}
