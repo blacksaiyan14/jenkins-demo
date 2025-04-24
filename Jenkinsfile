@@ -52,7 +52,7 @@ pipeline {
                     def imageName = "blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_ID}"
                     sh """
                         docker build -t ${imageName} \
-                        --build-arg DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}" \
+                        --build-arg DJANGO_SECRET_KEY="${SECRET_KEY}" \
                         ./Backend/odc
                     """
                 }
