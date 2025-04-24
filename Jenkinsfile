@@ -49,7 +49,12 @@ pipeline {
         stage('Build Backend') {
             steps {
                 script {
-                    docker.build("blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}", "--build-arg DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY} ./Backend/odc")
+                    def imageName = "blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_ID}"
+                    sh """
+                        docker build -t ${imageName} \
+                        --build-arg DJANGO_SECRET_KEY="${DJANGO_SECRET_KEY}" \
+                        ./Backend/odc
+                    """
                 }
             }
         }
@@ -110,11 +115,10 @@ pipeline {
             }
             steps {
                 script {
-    def imageName = "blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_ID}"
-
-                    docker.withRegistry('https://hub.docker.com/repository/docker/blacksaiyan/projet-fil-rouge-jenkins/', 'dockerhub-creds') {
-                        docker.image(imageName).push()
-                        docker.image(imageName).push('latest')
+                    // Tag and push backend
+                    docker.withRegistry('https://hub.docker.com', 'dockerhub-creds') {
+                        docker.image("blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}").push()
+                        docker.image("blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}").push('latest')
                     }
                     
                     // Tag and push frontend
