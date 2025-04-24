@@ -1,6 +1,10 @@
 pipeline {
     agent any
     
+    triggers {
+        pollSCM('H/1 * * * *') // Vérifie les changements toutes les 5 minutes
+    }
+    
     environment {
         // Docker registry credentials
         DOCKER_REGISTRY = credentials('dockerhub-creds')
@@ -24,19 +28,28 @@ pipeline {
     options {
         buildDiscarder(logRotator(numToKeepStr: '10'))
         timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds() // Empêche les builds concurrents
     }
     
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']], // Adaptez selon votre branche principale
+                    extensions: [[$class: 'CleanBeforeCheckout']],
+                    userRemoteConfigs: [[
+                        credentialsId: 'github-creds', // Ajoutez vos credentials Git si nécessaire
+                        url: 'https://github.com/blacksaiyan14/jenkins-demo.git' // Remplacez par l'URL de votre dépôt
+                    ]]
+                ])
             }
         }
         
         stage('Build Backend') {
             steps {
                 script {
-                    docker.build("backend:${TAG}", "--build-arg DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY} ./Backend/odc")
+                    docker.build("blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}", "--build-arg DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY} ./Backend/odc")
                 }
             }
         }
@@ -44,7 +57,7 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 script {
-                    docker.build("frontend:${TAG}", "--build-arg VITE_API_BASE_URL=${API_BASE_URL} ./Frontend")
+                    docker.build("blacksaiyan/projet-fil-rouge-jenkins:frontend-${TAG}", "--build-arg VITE_API_BASE_URL=${API_BASE_URL} ./Frontend")
                 }
             }
         }
@@ -52,8 +65,7 @@ pipeline {
         stage('Unit Tests Backend') {
             steps {
                 script {
-                    // Run backend tests in a container
-                    docker.image("backend:${TAG}").inside {
+                    docker.image("blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}").inside {
                         sh 'python manage.py test --noinput'
                     }
                 }
@@ -79,9 +91,9 @@ pipeline {
                         done
                     """
                     
-                    // Run integration tests (you would replace this with your actual test commands)
+                    // Run integration tests
                     sh 'echo "Running integration tests..."'
-                    // Example: sh 'docker-compose -f ${COMPOSE_FILE} run --rm backend python manage.py test integration_tests'
+                    // Exemple: sh 'docker-compose -f ${COMPOSE_FILE} run --rm backend python manage.py test integration_tests'
                 }
             }
             post {
@@ -94,20 +106,20 @@ pipeline {
         
         stage('Push Images') {
             when {
-                branch 'main' // or 'master' or your production branch
+                branch 'main'
             }
             steps {
                 script {
                     // Tag and push backend
-                    docker.withRegistry('https://hub.docker.com/repository/docker/blacksaiyan/projet-fil-rouge-jenkins/general', 'dockerhub-creds') {
-                        docker.image("backend:${TAG}").push()
-                        docker.image("backend:${TAG}").push('latest')
+                    docker.withRegistry('https://hub.docker.com', 'dockerhub-creds') {
+                        docker.image("blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}").push()
+                        docker.image("blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}").push('latest')
                     }
                     
                     // Tag and push frontend
-                    docker.withRegistry('https://hub.docker.com/repository/docker/blacksaiyan/projet-fil-rouge-jenkins/general', 'dockerhub-creds') {
-                        docker.image("frontend:${TAG}").push()
-                        docker.image("frontend:${TAG}").push('latest')
+                    docker.withRegistry('https://hub.docker.com', 'dockerhub-creds') {
+                        docker.image("blacksaiyan/projet-fil-rouge-jenkins:frontend-${TAG}").push()
+                        docker.image("blacksaiyan/projet-fil-rouge-jenkins:frontend-${TAG}").push('latest')
                     }
                 }
             }
@@ -115,15 +127,19 @@ pipeline {
         
         stage('Deploy') {
             when {
-                branch 'main' // or 'master' or your production branch
+                branch 'main'
             }
             steps {
                 script {
-                    // On a production environment, you would deploy the images
-                    sh """
-                        docker-compose -f ${COMPOSE_FILE} pull
-                        docker-compose -f ${COMPOSE_FILE} up -d
-                    """
+                    sshagent(['ssh-deploy-creds']) { // Ajoutez vos credentials SSH pour le déploiement
+                        sh """
+                            ssh -o StrictHostKeyChecking=no user@server "
+                                cd /path/to/project &&
+                                docker-compose -f ${COMPOSE_FILE} pull &&
+                                docker-compose -f ${COMPOSE_FILE} up -d
+                            "
+                        """
+                    }
                 }
             }
         }
@@ -133,17 +149,21 @@ pipeline {
         always {
             // Clean up workspace
             cleanWs()
+            
+            // Clean up Docker
+            script {
+                sh 'docker system prune -f || true'
+            }
         }
         failure {
-            // Notify on failure
             emailext (
                 subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
                 body: """Check console output at ${env.BUILD_URL}console""",
-                to: 'cissetaif3@gmail.com'
+                to: 'cissetaif3@gmail.com',
+                attachLog: true
             )
         }
         success {
-            // Notify on success
             emailext (
                 subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
                 body: """Check console output at ${env.BUILD_URL}console""",
