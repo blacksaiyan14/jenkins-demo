@@ -2,12 +2,10 @@ pipeline {
     agent any
 
     triggers {
-        pollSCM('H/1 * * * *')
+        pollSCM('H/1 * * * *') // Vérifie les changements Git chaque minute
     }
 
     environment {
-        DOCKER_REGISTRY = credentials('dockerhub-creds')
-        DJANGO_SECRET_KEY = credentials('django-secret-key')
         API_BASE_URL = 'http://backend:8000'
         TAG = "${env.BUILD_NUMBER}"
         COMPOSE_FILE = 'docker-compose.yml'
@@ -37,18 +35,30 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 script {
-                    docker.build("blacksaiyan/projet-fil-rouge-jenkins:frontend-${TAG}", "--build-arg VITE_API_BASE_URL=${API_BASE_URL} ./Frontend")
+                    sh """
+                        docker build -t blacksaiyan/projet-fil-rouge-jenkins:frontend-${env.BUILD_NUMBER} \
+                          --build-arg VITE_API_BASE_URL=${API_BASE_URL} \
+                          ./Frontend
+                    """
+                }
+            }
+        }
+
+        stage('Build Backend') {
+            steps {
+                withCredentials([string(credentialsId: 'django-secret-key', variable: 'DJANGO_SECRET_KEY')]) {
+                    sh """
+                        docker build -t blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} \
+                          --build-arg DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY \
+                          ./Backend/odc
+                    """
                 }
             }
         }
 
         stage('Unit Tests Backend') {
             steps {
-                script {
-                    docker.image("blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}").inside {
-                        sh 'python manage.py test --noinput'
-                    }
-                }
+                sh "docker run --rm blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} python manage.py test --noinput"
             }
         }
 
@@ -56,17 +66,20 @@ pipeline {
             steps {
                 script {
                     sh "docker-compose -f ${COMPOSE_FILE} up -d --build"
+
                     sh """
+                        echo "⏳ Attente de la santé du backend..."
                         while ! docker-compose -f ${COMPOSE_FILE} ps backend | grep -q '(healthy)'; do
                             sleep 5
-                            echo "Waiting for backend to be healthy..."
                         done
+
+                        echo "⏳ Attente de la santé du frontend..."
                         while ! docker-compose -f ${COMPOSE_FILE} ps frontend | grep -q '(healthy)'; do
                             sleep 5
-                            echo "Waiting for frontend to be healthy..."
                         done
                     """
-                    sh 'echo "Running integration tests..."'
+
+                    sh 'echo "✅ Tests d’intégration fictifs terminés."'
                 }
             }
             post {
@@ -83,10 +96,17 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-                        docker.image("blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}").push()
-                        docker.image("blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}").push('latest')
-                        docker.image("blacksaiyan/projet-fil-rouge-jenkins:frontend-${TAG}").push()
-                        docker.image("blacksaiyan/projet-fil-rouge-jenkins:frontend-${TAG}").push('latest')
+                        def backend = "blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER}"
+                        def frontend = "blacksaiyan/projet-fil-rouge-jenkins:frontend-${env.BUILD_NUMBER}"
+
+                        sh "docker tag $backend blacksaiyan/projet-fil-rouge-jenkins:backend-latest"
+                        sh "docker tag $frontend blacksaiyan/projet-fil-rouge-jenkins:frontend-latest"
+
+                        sh "docker push $backend"
+                        sh "docker push blacksaiyan/projet-fil-rouge-jenkins:backend-latest"
+
+                        sh "docker push $frontend"
+                        sh "docker push blacksaiyan/projet-fil-rouge-jenkins:frontend-latest"
                     }
                 }
             }
@@ -121,16 +141,16 @@ pipeline {
         }
         failure {
             emailext (
-                subject: "❌ FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Job failed. Check console output: ${env.BUILD_URL}console",
+                subject: "ÉCHEC : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "Consultez la sortie console : ${env.BUILD_URL}console",
                 to: 'cissetaif3@gmail.com',
                 attachLog: true
             )
         }
         success {
             emailext (
-                subject: "✅ SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Job succeeded. View logs: ${env.BUILD_URL}console",
+                subject: "SUCCÈS : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "Le build est passé avec succès ! Voir : ${env.BUILD_URL}console",
                 to: 'cissetaif3@gmail.com'
             )
         }
