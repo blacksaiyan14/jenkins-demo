@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     triggers {
-        pollSCM('H/1 * * * *') // Vérifie les changements Git chaque minute
+        githubPush() // Déclenche le job à chaque push GitHub (si webhook actif)
     }
 
     environment {
