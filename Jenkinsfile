@@ -96,7 +96,7 @@ pipeline {
             }
             steps {
                 script {
-                    docker.withRegistry('https://hub.docker.com/repository/docker/blacksaiyan/projet-fil-rouge-jenkins/general', 'dockerhub-creds') {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
                         def backend = "blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER}"
                         def frontend = "blacksaiyan/projet-fil-rouge-jenkins:frontend-${env.BUILD_NUMBER}"
 
