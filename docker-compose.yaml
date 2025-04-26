@@ -36,7 +36,7 @@ services:
   frontend:
     image: frontend
     build:
-      context: ../../Documents/ODC/Frontend
+      context: ./Frontend
       dockerfile: Dockerfile
     ports:
       - 5173:5173
