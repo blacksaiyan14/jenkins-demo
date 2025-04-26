@@ -32,6 +32,18 @@ pipeline {
             }
         }
 
+        stage('Build Backend') {
+            steps {
+                script{
+                    sh """
+                    docker build -t blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} \
+                      --build-arg \
+                      ./Backend/odc
+                    """
+                }
+            }
+        }
+//DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
         stage('Build Frontend') {
             steps {
                 script {
@@ -39,18 +51,6 @@ pipeline {
                         docker build -t blacksaiyan/projet-fil-rouge-jenkins:frontend-${env.BUILD_NUMBER} \
                           --build-arg VITE_API_BASE_URL=${API_BASE_URL} \
                           ./Frontend
-                    """
-                }
-            }
-        }
-
-        stage('Build Backend') {
-            steps {
-                script{
-                    sh """
-                    docker build -t blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} \
-                      --build-arg DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY} \
-                      ./Backend/odc
                     """
                 }
             }
