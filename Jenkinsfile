@@ -91,9 +91,9 @@ pipeline {
         // }
 
         stage('Push Images') {
-            when {
-                branch 'main' // Pousser seulement sur la branche main
-            }
+            // when {
+            //     branch 'main' // Pousser seulement sur la branche main
+            // }
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
