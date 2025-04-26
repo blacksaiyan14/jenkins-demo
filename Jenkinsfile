@@ -9,6 +9,7 @@ pipeline {
         API_BASE_URL = 'http://backend:8000'
         TAG = "${env.BUILD_NUMBER}"
         COMPOSE_FILE = 'docker-compose.yml'
+        DJANGO_SECRET_KEY = 'django-creds'
     }
 
     options {
@@ -37,13 +38,13 @@ pipeline {
                 script{
                     sh """
                     docker build -t blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} \
-                      --build-arg \
+                      --build-arg DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY} \
                       ./Backend/odc
                     """
                 }
             }
         }
-//DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+
         stage('Build Frontend') {
             steps {
                 script {
