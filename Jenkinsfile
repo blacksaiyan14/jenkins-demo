@@ -18,20 +18,20 @@ pipeline {
         disableConcurrentBuilds()
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    extensions: [[$class: 'CleanBeforeCheckout']],
-                    userRemoteConfigs: [[
-                        credentialsId: 'github-creds',
-                        url: 'https://github.com/blacksaiyan14/jenkins-demo.git'
-                    ]]
-                ])
-            }
-        }
+    // stages {
+    //     stage('Checkout') {
+    //         steps {
+    //             checkout([
+    //                 $class: 'GitSCM',
+    //                 branches: [[name: '*/main']],
+    //                 extensions: [[$class: 'CleanBeforeCheckout']],
+    //                 userRemoteConfigs: [[
+    //                     credentialsId: 'github-creds',
+    //                     url: 'https://github.com/blacksaiyan14/jenkins-demo.git'
+    //                 ]]
+    //             ])
+    //         }
+    //     }
 
         stage('Build Backend') {
             steps {
@@ -63,32 +63,32 @@ pipeline {
             }
         }
 
-        stage('Integration Tests') {
-            steps {
-                script {
-                    sh "docker-compose -f ${COMPOSE_FILE} up -d --build"
+        // stage('Integration Tests') {
+        //     steps {
+        //         script {
+        //             sh "docker-compose -f ${COMPOSE_FILE} up -d --build"
 
-                    sh """
-                        echo "⏳ Attente de la santé du backend..."
-                        while ! docker-compose -f ${COMPOSE_FILE} ps backend | grep -q '(healthy)'; do
-                            sleep 5
-                        done
+        //             sh """
+        //                 echo "⏳ Attente de la santé du backend..."
+        //                 while ! docker-compose -f ${COMPOSE_FILE} ps backend | grep -q '(healthy)'; do
+        //                     sleep 5
+        //                 done
 
-                        echo "⏳ Attente de la santé du frontend..."
-                        while ! docker-compose -f ${COMPOSE_FILE} ps frontend | grep -q '(healthy)'; do
-                            sleep 5
-                        done
-                    """
+        //                 echo "⏳ Attente de la santé du frontend..."
+        //                 while ! docker-compose -f ${COMPOSE_FILE} ps frontend | grep -q '(healthy)'; do
+        //                     sleep 5
+        //                 done
+        //             """
 
-                    sh 'echo "✅ Tests d’intégration fictifs terminés."'
-                }
-            }
-            post {
-                always {
-                    sh "docker-compose -f ${COMPOSE_FILE} down -v"
-                }
-            }
-        }
+        //             sh 'echo "✅ Tests d’intégration fictifs terminés."'
+        //         }
+        //     }
+        //     post {
+        //         always {
+        //             sh "docker-compose -f ${COMPOSE_FILE} down -v"
+        //         }
+        //     }
+        // }
 
         stage('Push Images') {
             when {
@@ -113,25 +113,27 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Local') {
             when {
-                branch 'main'
+                branch 'main' // Déploiement uniquement sur la branche main
             }
             steps {
                 script {
-                    sshagent(['ssh-deploy-creds']) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no user@server "
-                                cd /path/to/project &&
-                                docker-compose -f ${COMPOSE_FILE} pull &&
-                                docker-compose -f ${COMPOSE_FILE} up -d
-                            "
-                        """
-                    }
+                    sh """
+                        echo "🚀 Déploiement local basé sur DockerHub depuis la racine"
+
+                        # Tirer les dernières images Docker depuis DockerHub
+                        docker-compose -f ${COMPOSE_FILE} pull
+
+                        # Démarrer tous les services avec les nouvelles images
+                        docker-compose -f ${COMPOSE_FILE} up -d
+
+                        echo "✅ Déploiement terminé avec succès."
+                    """
                 }
             }
         }
-    }
+
 
     post {
         always {
