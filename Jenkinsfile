@@ -91,9 +91,9 @@ pipeline {
         // }
 
         stage('Push Images') {
-            when {
-                branch 'main'
-            }
+            // when {
+            //     branch 'main'
+            // }
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
@@ -114,9 +114,9 @@ pipeline {
         }
 
         stage('Deploy Local') {
-            when {
-                branch 'main' // Déploiement uniquement sur la branche main
-            }
+            // when {
+            //     branch 'main' // Déploiement uniquement sur la branche main
+            // }
             steps {
                 script {
                     sh """
