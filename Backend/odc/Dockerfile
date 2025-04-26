@@ -1,33 +1,11 @@
-# Étape 1 : Build des dépendances
-FROM python:3.13-slim AS builder
-
-WORKDIR /app
-COPY requirements.txt .
-
-# Installation des dépendances dans un virtualenv isolé
-RUN python -m venv /opt/venv && \
-    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
-
-# Étape 2 : Image finale minimaliste
 FROM python:3.13-slim
-
-# Variables d'environnement
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PATH="/opt/venv/bin:$PATH"
-
-# Configuration utilisateur non-root
-RUN adduser --disabled-password --gecos "" appuser && \
-    mkdir -p /app && \
-    chown appuser:appuser /app
-
+EXPOSE 8000
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+COPY requirements.txt .
+RUN python -m pip install -r requirements.txt
 WORKDIR /app
-
-# Copie des fichiers depuis l'étape builder
-COPY --from=builder /opt/venv /opt/venv
-COPY --chown=appuser:appuser . /app/
-
+COPY . /app/
+RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown appuser /app
 USER appuser
-
-# Commande Gunicorn avec configuration optimisée
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--threads", "2", "odc.wsgi:application"]
+CMD [ "gunicorn", "--bind", "0.0.0.0:8000", "odc.wsgi:application" ]
