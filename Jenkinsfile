@@ -91,27 +91,34 @@ pipeline {
         // }
 
         stage('Push Images') {
-            // when {
-            //     branch 'main'
-            // }
+            when {
+                branch 'main' // Pousser seulement sur la branche main
+            }
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-                        def backend = "blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER}"
-                        def frontend = "blacksaiyan/projet-fil-rouge-jenkins:frontend-${env.BUILD_NUMBER}"
+                        echo "🔖 Tagging les images..."
+                        sh """
+                            docker tag blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} blacksaiyan/projet-fil-rouge-jenkins:backend-latest
+                            docker tag blacksaiyan/projet-fil-rouge-jenkins:frontend-${env.BUILD_NUMBER} blacksaiyan/projet-fil-rouge-jenkins:frontend-latest
+                        """
 
-                        sh "docker tag $backend blacksaiyan/projet-fil-rouge-jenkins:backend-latest"
-                        sh "docker tag $frontend blacksaiyan/projet-fil-rouge-jenkins:frontend-latest"
+                        echo "📤 Pushing Backend images vers DockerHub..."
+                        sh """
+                            docker push blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER}
+                            docker push blacksaiyan/projet-fil-rouge-jenkins:backend-latest
+                        """
 
-                        sh "docker push $backend"
-                        sh "docker push blacksaiyan/projet-fil-rouge-jenkins:backend-latest"
-
-                        sh "docker push $frontend"
-                        sh "docker push blacksaiyan/projet-fil-rouge-jenkins:frontend-latest"
+                        echo "📤 Pushing Frontend images vers DockerHub..."
+                        sh """
+                            docker push blacksaiyan/projet-fil-rouge-jenkins:frontend-${env.BUILD_NUMBER}
+                            docker push blacksaiyan/projet-fil-rouge-jenkins:frontend-latest
+                        """
                     }
                 }
             }
         }
+
 
         stage('Deploy Local') {
             // when {
