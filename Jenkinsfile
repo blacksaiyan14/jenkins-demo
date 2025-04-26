@@ -18,20 +18,20 @@ pipeline {
         disableConcurrentBuilds()
     }
 
-    // stages {
-    //     stage('Checkout') {
-    //         steps {
-    //             checkout([
-    //                 $class: 'GitSCM',
-    //                 branches: [[name: '*/main']],
-    //                 extensions: [[$class: 'CleanBeforeCheckout']],
-    //                 userRemoteConfigs: [[
-    //                     credentialsId: 'github-creds',
-    //                     url: 'https://github.com/blacksaiyan14/jenkins-demo.git'
-    //                 ]]
-    //             ])
-    //         }
-    //     }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    extensions: [[$class: 'CleanBeforeCheckout']],
+                    userRemoteConfigs: [[
+                        credentialsId: 'github-creds',
+                        url: 'https://github.com/blacksaiyan14/jenkins-demo.git'
+                    ]]
+                ])
+            }
+        }
 
         stage('Build Backend') {
             steps {
