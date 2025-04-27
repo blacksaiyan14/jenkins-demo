@@ -99,9 +99,9 @@ pipeline {
                         # Supprimer l'image postgres local cassée si besoin
                         docker rmi postgres:latest || true
 
-                        # Supprimer d'abord les anciennes images cassées
-                docker rmi blacksaiyan/projet-fil-rouge-jenkins:backend-latest || true
-                docker rmi blacksaiyan/projet-fil-rouge-jenkins:frontend-latest || true
+                        # Supprimer les anciennes images locales cassées
+                        docker rmi blacksaiyan/projet-fil-rouge-jenkins:backend-latest || true
+                        docker rmi blacksaiyan/projet-fil-rouge-jenkins:frontend-latest || true
 
                         # Tirer les dernières images Docker depuis DockerHub
                         docker-compose -f ${COMPOSE_FILE} pull
