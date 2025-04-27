@@ -2,10 +2,7 @@ version: "3.8"
 
 services:
   backend:
-    image: backend
-    build:
-      context: ./Backend/odc/
-      dockerfile: Dockerfile
+    image: blacksaiyan/projet-fil-rouge-jenkins:backend-latest
     ports:
       - 8000:8000
     environment:
@@ -19,25 +16,14 @@ services:
     ports:
       - 5432:5432
     environment:
-      POSTGRES_USER: odc
-      POSTGRES_PASSWORD: odc123
-      POSTGRES_DB: odcdb
+      - POSTGRES_USER=odc
+      - POSTGRES_PASSWORD=odc123
+      - POSTGRES_DB=odcdb
     volumes:
-      - pgdata:/var/lib/postgresql/database
-
-  db-migrations:
-    image: backend
-    command: python manage.py migrate
-    depends_on:
-      - database
-    profiles:
-      - tools
+      - pgdata:/var/lib/postgresql/data
 
   frontend:
-    image: frontend
-    build:
-      context: ./Frontend
-      dockerfile: Dockerfile
+    image: blacksaiyan/projet-fil-rouge-jenkins:frontend-latest
     ports:
       - 5173:5173
     depends_on:

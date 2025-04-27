@@ -63,37 +63,7 @@ pipeline {
             }
         }
 
-        // stage('Integration Tests') {
-        //     steps {
-        //         script {
-        //             sh "docker-compose -f ${COMPOSE_FILE} up -d --build"
-
-        //             sh """
-        //                 echo "⏳ Attente de la santé du backend..."
-        //                 while ! docker-compose -f ${COMPOSE_FILE} ps backend | grep -q '(healthy)'; do
-        //                     sleep 5
-        //                 done
-
-        //                 echo "⏳ Attente de la santé du frontend..."
-        //                 while ! docker-compose -f ${COMPOSE_FILE} ps frontend | grep -q '(healthy)'; do
-        //                     sleep 5
-        //                 done
-        //             """
-
-        //             sh 'echo "✅ Tests d’intégration fictifs terminés."'
-        //         }
-        //     }
-        //     post {
-        //         always {
-        //             sh "docker-compose -f ${COMPOSE_FILE} down -v"
-        //         }
-        //     }
-        // }
-
         stage('Push Images') {
-            // when {
-            //     branch 'main' // Pousser seulement sur la branche main
-            // }
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'docker-creds') {
@@ -121,9 +91,6 @@ pipeline {
 
 
         stage('Deploy Local') {
-            // when {
-            //     branch 'main' // Déploiement uniquement sur la branche main
-            // }
             steps {
                 script {
                     sh """
