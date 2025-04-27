@@ -1,15 +1,11 @@
 pipeline {
     agent any
 
-    triggers {
-        githubPush() // Déclenche le job à chaque push GitHub (si webhook actif)
-    }
-
     environment {
         API_BASE_URL = 'http://backend:8000'
         TAG = "${env.BUILD_NUMBER}"
         COMPOSE_FILE = 'docker-compose.yaml'
-        DJANGO_SECRET_KEY = 'django-creds'
+        DJANGO_SECRET_KEY = credentials('django-secret-key')
     }
 
     options {
@@ -18,12 +14,16 @@ pipeline {
         disableConcurrentBuilds()
     }
 
+    triggers {
+        githubPush() // Déclenche à chaque push GitHub (webhook actif)
+    }
+
     stages {
         stage('Checkout') {
             steps {
                 checkout([
                     $class: 'GitSCM',
-                    branches: [[name: '*/main']],
+                    branches: [[name: '*/main']], // Branche MAIN
                     extensions: [[$class: 'CleanBeforeCheckout']],
                     userRemoteConfigs: [[
                         credentialsId: 'github-creds',
@@ -35,11 +35,12 @@ pipeline {
 
         stage('Build Backend') {
             steps {
-                script{
+                script {
                     sh """
-                    docker build -t blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} \
-                      --build-arg DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY} \
-                      ./Backend/odc
+                        echo "🚀 Build Backend"
+                        docker build -t blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG} \
+                          --build-arg DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY} \
+                          ./Backend/odc
                     """
                 }
             }
@@ -49,7 +50,8 @@ pipeline {
             steps {
                 script {
                     sh """
-                        docker build -t blacksaiyan/projet-fil-rouge-jenkins:frontend-${env.BUILD_NUMBER} \
+                        echo "🚀 Build Frontend"
+                        docker build -t blacksaiyan/projet-fil-rouge-jenkins:frontend-${TAG} \
                           --build-arg VITE_API_BASE_URL=${API_BASE_URL} \
                           ./Frontend
                     """
@@ -59,59 +61,35 @@ pipeline {
 
         stage('Unit Tests Backend') {
             steps {
-                sh "docker run --rm blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} python manage.py test --noinput"
+                script {
+                    echo "🧪 Tests unitaires backend"
+                    sh "docker run --rm blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG} python manage.py test --noinput"
+                }
             }
         }
 
-        // stage('Integration Tests') {
-        //     steps {
-        //         script {
-        //             sh "docker-compose -f ${COMPOSE_FILE} up -d --build"
-
-        //             sh """
-        //                 echo "⏳ Attente de la santé du backend..."
-        //                 while ! docker-compose -f ${COMPOSE_FILE} ps backend | grep -q '(healthy)'; do
-        //                     sleep 5
-        //                 done
-
-        //                 echo "⏳ Attente de la santé du frontend..."
-        //                 while ! docker-compose -f ${COMPOSE_FILE} ps frontend | grep -q '(healthy)'; do
-        //                     sleep 5
-        //                 done
-        //             """
-
-        //             sh 'echo "✅ Tests d’intégration fictifs terminés."'
-        //         }
-        //     }
-        //     post {
-        //         always {
-        //             sh "docker-compose -f ${COMPOSE_FILE} down -v"
-        //         }
-        //     }
-        // }
-
         stage('Push Images') {
-            // when {
-            //     branch 'main' // Pousser seulement sur la branche main
-            // }
+            when {
+                branch 'main'
+            }
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-creds') {
-                        echo "🔖 Tagging les images..."
+                        echo "🔖 Tagging des images"
                         sh """
-                            docker tag blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} blacksaiyan/projet-fil-rouge-jenkins:backend-latest
-                            docker tag blacksaiyan/projet-fil-rouge-jenkins:frontend-${env.BUILD_NUMBER} blacksaiyan/projet-fil-rouge-jenkins:frontend-latest
+                            docker tag blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG} blacksaiyan/projet-fil-rouge-jenkins:backend-latest
+                            docker tag blacksaiyan/projet-fil-rouge-jenkins:frontend-${TAG} blacksaiyan/projet-fil-rouge-jenkins:frontend-latest
                         """
 
-                        echo "📤 Pushing Backend images vers DockerHub..."
+                        echo "📤 Push backend images"
                         sh """
-                            docker push blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER}
+                            docker push blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG}
                             docker push blacksaiyan/projet-fil-rouge-jenkins:backend-latest
                         """
 
-                        echo "📤 Pushing Frontend images vers DockerHub..."
+                        echo "📤 Push frontend images"
                         sh """
-                            docker push blacksaiyan/projet-fil-rouge-jenkins:frontend-${env.BUILD_NUMBER}
+                            docker push blacksaiyan/projet-fil-rouge-jenkins:frontend-${TAG}
                             docker push blacksaiyan/projet-fil-rouge-jenkins:frontend-latest
                         """
                     }
@@ -119,23 +97,16 @@ pipeline {
             }
         }
 
-
         stage('Deploy Local') {
-            // when {
-            //     branch 'main' // Déploiement uniquement sur la branche main
-            // }
+            when {
+                branch 'main'
+            }
             steps {
                 script {
+                    echo "🚀 Déploiement local"
                     sh """
-                        echo "🚀 Déploiement local basé sur DockerHub depuis la racine"
-
-                        # Tirer les dernières images Docker depuis DockerHub
                         docker-compose -f ${COMPOSE_FILE} pull
-
-                        # Démarrer tous les services avec les nouvelles images
                         docker-compose -f ${COMPOSE_FILE} up -d
-
-                        echo "✅ Déploiement terminé avec succès."
                     """
                 }
             }
@@ -144,6 +115,7 @@ pipeline {
 
     post {
         always {
+            echo "🧹 Nettoyage du workspace"
             cleanWs()
             script {
                 sh 'docker system prune -f || true'
@@ -151,16 +123,16 @@ pipeline {
         }
         failure {
             emailext (
-                subject: "ÉCHEC : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Consultez la sortie console : ${env.BUILD_URL}console",
+                subject: "❌ ÉCHEC : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "Voir la sortie console : ${env.BUILD_URL}console",
                 to: 'cissetaif3@gmail.com',
                 attachLog: true
             )
         }
         success {
             emailext (
-                subject: "SUCCÈS : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Le build est passé avec succès ! Voir : ${env.BUILD_URL}console",
+                subject: "✅ SUCCÈS : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "Le build s'est déroulé avec succès : ${env.BUILD_URL}console",
                 to: 'cissetaif3@gmail.com'
             )
         }
