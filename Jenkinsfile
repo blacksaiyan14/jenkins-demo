@@ -5,7 +5,7 @@ pipeline {
         API_BASE_URL = 'http://backend:8000'
         TAG = "${env.BUILD_NUMBER}"
         COMPOSE_FILE = 'docker-compose.yaml'
-        DJANGO_SECRET_KEY = credentials('django-secret-key')
+        DJANGO_SECRET_KEY = credentials('django-creds')
     }
 
     options {
