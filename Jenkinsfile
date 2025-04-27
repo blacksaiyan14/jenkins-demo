@@ -35,16 +35,17 @@ pipeline {
 
         stage('Build Backend') {
             steps {
-                script {
-                    sh """
+                withCredentials([string(credentialsId: 'django-secret-key', variable: 'DJANGO_SECRET_KEY')]) {
+                    sh '''
                         echo "🚀 Build Backend"
-                        docker build -t blacksaiyan/projet-fil-rouge-jenkins:backend-${TAG} \
-                          --build-arg DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY} \
-                          ./Backend/odc
-                    """
+                        docker build -t blacksaiyan/projet-fil-rouge-jenkins:backend-${BUILD_NUMBER} \
+                        --build-arg DJANGO_SECRET_KEY="$DJANGO_SECRET_KEY" \
+                        ./Backend/odc
+                    '''
                 }
             }
         }
+
 
         stage('Build Frontend') {
             steps {
