@@ -109,6 +109,9 @@ pipeline {
                         # Démarrer tous les services avec les nouvelles images
                         docker-compose -f ${COMPOSE_FILE} up -d
 
+                        # Vérifier que tous les services sont en cours
+                        docker-compose -f ${COMPOSE_FILE} ps
+
                         echo "✅ Déploiement terminé avec succès."
                     """
                 }
