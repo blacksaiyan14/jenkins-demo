@@ -96,6 +96,9 @@ pipeline {
                     sh """
                         echo "🚀 Déploiement local basé sur DockerHub depuis la racine"
 
+                        # Supprimer l'image postgres local cassée si besoin
+                        docker rmi postgres:latest || true
+
                         # Tirer les dernières images Docker depuis DockerHub
                         docker-compose -f ${COMPOSE_FILE} pull
 
