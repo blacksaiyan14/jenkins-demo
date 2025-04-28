@@ -113,7 +113,9 @@ pipeline {
                         docker-compose -f ${COMPOSE_FILE} ps
 
                         # Avoir l'ip du frontend
-                        export IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${FRONTEND_CONTAINER})
+                        sh """
+                            export IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${FRONTEND_CONTAINER})
+                        """
 
                         echo "✅ Déploiement terminé avec succès."
                     """
