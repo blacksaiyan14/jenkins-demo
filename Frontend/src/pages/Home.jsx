@@ -17,7 +17,7 @@ const Home = () => {
             </div>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4">
-            Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Black_Sayan App</span>
+            Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Black_Sayan14 App</span>
           </h1>
           <p className="mb-8 text-xl text-gray-600 max-w-2xl mx-auto">
             A secure and elegant application to manage your personal profile information
