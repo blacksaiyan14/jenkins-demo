@@ -112,11 +112,6 @@ pipeline {
                         # Vérifier que tous les services sont en cours
                         docker-compose -f ${COMPOSE_FILE} ps
 
-                        # Avoir l'ip du frontend
-                        sh """
-                            export IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${FRONTEND_CONTAINER})
-                        """
-
                         echo "✅ Déploiement terminé avec succès."
                     """
                 }
