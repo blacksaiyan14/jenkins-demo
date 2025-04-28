@@ -129,7 +129,7 @@ pipeline {
         failure {
             emailext (
                 subject: "ÉCHEC : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Consultez la sortie console : ${env.BUILD_URL}console\n\nIP du Frontend : ${IP}\n\nDate : ${env.BUILD_TIMESTAMP}",
+                body: "Consultez la sortie console : ${env.BUILD_URL}console\n\nDate : ${env.BUILD_TIMESTAMP}",
                 to: 'cissetaif3@gmail.com',
                 attachLog: true
             )
@@ -143,7 +143,7 @@ pipeline {
         success {
             emailext (
                 subject: "SUCCÈS : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Le build est passé avec succès ! Voir : ${env.BUILD_URL}console\n\nIP du Frontend : ${IP}\n\nDate : ${env.BUILD_TIMESTAMP}",
+                body: "Le build est passé avec succès ! Voir : ${env.BUILD_URL}console\n\nDate : ${env.BUILD_TIMESTAMP}",
                 to: 'cissetaif3@gmail.com'
             )
 
