@@ -133,12 +133,24 @@ pipeline {
                 to: 'cissetaif3@gmail.com',
                 attachLog: true
             )
+
+            slackSend(
+                channel: '#projet-fil-rouge',
+                message: "❌ Build échoué - ${env.JOB_NAME} (#${env.BUILD_NUMBER})",
+                color: 'danger'
+            )
         }
         success {
             emailext (
                 subject: "SUCCÈS : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 body: "Le build est passé avec succès ! Voir : ${env.BUILD_URL}console",
                 to: 'cissetaif3@gmail.com'
+            )
+
+            slackSend(
+                channel: '#projet-fil-rouge',
+                message: "✅ Build réussi - ${env.JOB_NAME} (#${env.BUILD_NUMBER})",
+                color: 'good'
             )
         }
     }
