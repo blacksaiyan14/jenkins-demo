@@ -112,6 +112,9 @@ pipeline {
                         # Vérifier que tous les services sont en cours
                         docker-compose -f ${COMPOSE_FILE} ps
 
+                        # Avoir l'ip du frontend
+                        export IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${FRONTEND_CONTAINER})
+
                         echo "✅ Déploiement terminé avec succès."
                     """
                 }
@@ -129,7 +132,7 @@ pipeline {
         failure {
             emailext (
                 subject: "ÉCHEC : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Consultez la sortie console : ${env.BUILD_URL}console",
+                body: "Consultez la sortie console : ${env.BUILD_URL}console\n\nIP du Frontend : ${IP}\n\nDate : ${env.BUILD_TIMESTAMP}",
                 to: 'cissetaif3@gmail.com',
                 attachLog: true
             )
@@ -143,7 +146,7 @@ pipeline {
         success {
             emailext (
                 subject: "SUCCÈS : ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                body: "Le build est passé avec succès ! Voir : ${env.BUILD_URL}console",
+                body: "Le build est passé avec succès ! Voir : ${env.BUILD_URL}console\n\nIP du Frontend : ${IP}\n\nDate : ${env.BUILD_TIMESTAMP}",
                 to: 'cissetaif3@gmail.com'
             )
 
