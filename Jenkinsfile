@@ -90,30 +90,41 @@ pipeline {
         }
 
 
-        stage('Deploy Local') {
+        stage('Deploy to EC2') {
+            environment {
+                EC2_USER = 'ec2-user'
+                EC2_HOST = credentials('ec2-host')
+                EC2_SSH_KEY = credentials('ec2-ssh-key')
+            }
             steps {
                 script {
-                    sh """
-                        echo "🚀 Déploiement local basé sur DockerHub depuis la racine"
-
-                        # Supprimer l'image postgres local cassée si besoin
-                        docker rmi postgres:latest || true
-
-                        # Supprimer les anciennes images locales cassées
-                        docker rmi blacksaiyan/projet-fil-rouge-jenkins:backend-latest || true
-                        docker rmi blacksaiyan/projet-fil-rouge-jenkins:frontend-latest || true
-
-                        # Tirer les dernières images Docker depuis DockerHub
-                        docker-compose -f ${COMPOSE_FILE} pull
-
-                        # Démarrer tous les services avec les nouvelles images
-                        docker-compose -f ${COMPOSE_FILE} up -d
-
-                        # Vérifier que tous les services sont en cours
-                        docker-compose -f ${COMPOSE_FILE} ps
-
-                        echo "✅ Déploiement terminé avec succès."
-                    """
+                    // Copier le fichier docker-compose.yaml vers l'instance EC2
+                    sh '''
+                        scp -i ${EC2_SSH_KEY} -o StrictHostKeyChecking=no ${COMPOSE_FILE} ${EC2_USER}@${EC2_HOST}:~/
+                    '''
+                    
+                    // Se connecter à l'instance EC2 et déployer les conteneurs
+                    sh '''
+                        ssh -i ${EC2_SSH_KEY} -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} """                        
+                            echo '🚀 Déploiement sur EC2 basé sur DockerHub'
+                            
+                            # Supprimer les anciennes images si elles existent
+                            docker rmi postgres:latest || true
+                            docker rmi blacksaiyan/projet-fil-rouge-jenkins:backend-latest || true
+                            docker rmi blacksaiyan/projet-fil-rouge-jenkins:frontend-latest || true
+                            
+                            # Tirer les dernières images Docker depuis DockerHub
+                            docker-compose -f docker-compose.yaml pull
+                            
+                            # Démarrer tous les services avec les nouvelles images
+                            docker-compose -f docker-compose.yaml up -d
+                            
+                            # Vérifier que tous les services sont en cours
+                            docker-compose -f docker-compose.yaml ps
+                            
+                            echo '✅ Déploiement sur EC2 terminé avec succès.'
+                        """
+                    '''
                 }
             }
         }
