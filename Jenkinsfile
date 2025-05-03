@@ -35,7 +35,7 @@ pipeline {
 
         stage('Build Backend') {
             steps {
-                sh "docker build -t blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} --build-arg DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY} ./Backend/odc"
+                sh "docker build -t blacksaiyan/projet-fil-rouge-jenkins:backend-${env.BUILD_NUMBER} ./Backend/odc"
             }
         }
 
